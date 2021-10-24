@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  elasticsearch:
+    image: docker.io/bitnami/elasticsearch:7.13.1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - "elasticsearch_data:/bitnami/elasticsearch"
+  kinesis2elasticsearch:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ELASTIC_URL=http://elasticsearch:9200
+      - OUTPUT_INDEX=firehose
+    depends_on:
+      - elasticsearch
+  kibana:
+    image: docker.io/bitnami/kibana:7.13.1
+    ports:
+      - "5601:5601"
+    volumes:
+      - "kibana_data:/bitnami/kibana"
+    depends_on:
+      - elasticsearch
+
+volumes:
+  elasticsearch_data:
+    driver: local
+  kibana_data:
+    driver: local

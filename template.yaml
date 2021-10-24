@@ -1,0 +1,269 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: This template creates all the necessary resources to setup a cross account log delivery for a given account.
+Parameters:
+  FirehoseName:
+    Type: String
+    Description: Name of the Firehose DeliveryStream that'll buffer the logs
+    MinLength: "1"
+    MaxLength: "64"
+    Default: "dev"
+    AllowedPattern: "[a-zA-Z0-9_.-]+"
+  SourceAccountID:
+    Type: Number
+    Description: Source account ID that is allowed to put a PutSubscriptionFilter and hence send logs to the Firehose DeliveryStream. This is a AWS Account ID
+    Default: 111111111111
+    MinValue: 000000000000
+    MaxValue: 999999999999
+  DestinationUrl:
+    Type: String
+    Description: The destination url for the logs. Has to be https
+    Default: "https://example.com/firehose"
+    AllowedPattern: "https://.*"
+  DestinationCredentials:
+    Type: String
+    Description: The credentials for the destination url
+    Default: "YWRtaW46YWRtaW4="
+  Encryption:
+    Type: String
+    Description: Whether to encrypt the logs or not
+    AllowedValues:
+      - true
+      - false
+    Default: false
+Conditions:
+  Encryption: !Equals
+    - !Ref Encryption
+    - true
+Resources:
+  FirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Allow Firehose to send data to S3 and talk to KMS
+      RoleName: !Join
+        - "-"
+        - - !Ref FirehoseName
+          - FirehoseRole
+          - !Ref AWS::Region
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: firehose.amazonaws.com
+          Action: sts:AssumeRole
+          Condition:
+            StringEquals:
+              sts:ExternalId: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: FirehosePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - !GetAtt Bucket.Arn
+                  - !Sub
+                    - ${BUCKET}/*
+                    - BUCKET: !GetAtt Bucket.Arn
+              - !If
+                - Encryption
+                - Effect: Allow
+                  Action:
+                    - kms:GenerateDataKey
+                    - kms:Decrypt
+                  Resource: !If
+                    - Encryption
+                    - !GetAtt KMS.Arn
+                    - !Ref AWS::NoValue
+                  Condition:
+                    StringEquals:
+                      kms:ViaService: !Sub s3.${AWS::Region}.${AWS::URLSuffix}
+                    StringLike:
+                      kms:EncryptionContext:aws:s3:arn:
+                        - !GetAtt Bucket.Arn
+                        - !Sub
+                          - ${BUCKET}/*
+                          - BUCKET: !GetAtt Bucket.Arn
+                - !Ref 'AWS::NoValue'
+              - Effect: Allow
+                Action:
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub
+                    - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LOG_GROUP}:log-stream:*
+                    - LOG_GROUP: !Ref LogGroup
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join [ "-", [ !Ref FirehoseName, !Ref AWS::AccountId ] ]
+      AccelerateConfiguration:
+        AccelerationStatus: Enabled
+      MetricsConfigurations:
+        - Id: EntireBucket
+      BucketEncryption: !If
+        - Encryption
+        - ServerSideEncryptionConfiguration:
+            - BucketKeyEnabled: True
+              ServerSideEncryptionByDefault:
+                SSEAlgorithm: aws:kms
+                KMSMasterKeyID: !If
+                  - Encryption
+                  - !GetAtt KMS.Arn
+                  - !Ref AWS::NoValue
+        - !Ref AWS::NoValue
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+  Firehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: DirectPut
+      DeliveryStreamName: !Ref FirehoseName
+      DeliveryStreamEncryptionConfigurationInput: !If
+        - Encryption
+        - KeyType: CUSTOMER_MANAGED_CMK
+          KeyARN: !If
+            - Encryption
+            - !GetAtt KMS.Arn
+            - !Ref AWS::NoValue
+        - !Ref 'AWS::NoValue'
+      HttpEndpointDestinationConfiguration:
+        EndpointConfiguration:
+          Name: kinesis2elastic
+          AccessKey: !Ref DestinationCredentials
+          Url: !Ref DestinationUrl
+        BufferingHints:
+          IntervalInSeconds: 60 # 60-900
+          SizeInMBs: 1 # 1-128
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Ref LogGroup
+          LogStreamName: !Ref LogStreamDestinationDelivery
+        RequestConfiguration:
+          CommonAttributes:
+            - AttributeName: "Moulick"
+              AttributeValue: "True"
+          ContentEncoding: NONE # GZIP | NONE
+        RoleARN: !GetAtt FirehoseRole.Arn
+        RetryOptions:
+          DurationInSeconds: 300 # 0-7200
+        S3BackupMode: AllData # AllData | FailedDataOnly
+        S3Configuration:
+          BucketARN: !GetAtt Bucket.Arn
+          RoleARN: !GetAtt FirehoseRole.Arn
+          BufferingHints:
+            SizeInMBs: 1 # 1-128
+            IntervalInSeconds: 60 # 60-900
+          CompressionFormat: UNCOMPRESSED # GZIP | HADOOP_SNAPPY | Snappy | UNCOMPRESSED | ZIP
+          Prefix: SUCCESS/
+          ErrorOutputPrefix: ERROR/
+          EncryptionConfiguration: !If
+            - Encryption
+            - KMSEncryptionConfig:
+                AWSKMSKeyARN: !If
+                  - Encryption
+                  - !GetAtt KMS.Arn
+                  - !Ref AWS::NoValue
+            - NoEncryptionConfig: NoEncryption
+          CloudWatchLoggingOptions:
+            Enabled: true
+            LogGroupName: !Ref LogGroup
+            LogStreamName: !Ref LogStreamBackupDelivery
+  CWLtoKinesisFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Allow CloudWatch Logs to send data to Kinesis Firehose
+      RoleName: !Join
+        - "-"
+        - - !Ref FirehoseName
+          - CWLtoKinesisFirehoseRole
+          - !Ref AWS::Region
+      AssumeRolePolicyDocument:
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: !Sub logs.${AWS::Region}.${AWS::URLSuffix}
+          Action: sts:AssumeRole
+      Policies:
+        - PolicyName: Permissions-Policy-For-CWL
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - firehose:*
+                Resource:
+                  - !Sub arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:*
+                  - !GetAtt Firehose.Arn
+  LogsDestination:
+    Type: AWS::Logs::Destination
+    Properties:
+      DestinationName: !Ref FirehoseName
+      DestinationPolicy: !Sub
+        - |
+          {
+            "Version" : "2012-10-17",
+            "Statement" : [
+              {
+                "Sid" : "",
+                "Effect" : "Allow",
+                "Principal" : {
+                  "AWS" : "${SourceAccountID}"
+                },
+                "Action" : "logs:PutSubscriptionFilter",
+                "Resource" : "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:destination:${self}"
+              }
+            ]
+          }
+        - SourceAccountID: !Ref SourceAccountID
+          self: !Ref FirehoseName
+      RoleArn: !GetAtt CWLtoKinesisFirehoseRole.Arn
+      TargetArn: !GetAtt Firehose.Arn
+  KMS:
+    Type: AWS::KMS::Key
+    Condition: Encryption
+    Properties:
+      Description: KMS Key to encrypt the data in the Firehose and Bucket
+      Enabled: True
+      EnableKeyRotation: True
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+      KeySpec: SYMMETRIC_DEFAULT
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join [ "/", [ "/aws/kinesisfirehose", !Ref FirehoseName ] ]
+      RetentionInDays: 30
+  LogStreamDestinationDelivery:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref LogGroup
+      LogStreamName: DestinationDelivery
+  LogStreamBackupDelivery:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref LogGroup
+      LogStreamName: BackupDelivery
+Outputs:
+  Destination:
+    Value: !GetAtt LogsDestination.Arn
+    Description: Arn of the Cloudwatch Logs Destination. Used to create the subscritpion filter.
+  Firehose:
+    Value: !GetAtt Firehose.Arn
+    Description: Arn of the Firehose.

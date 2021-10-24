@@ -1,0 +1,33 @@
+stages:
+  - build
+
+buildah-build:
+  stage: build
+  variables:
+    STORAGE_DRIVER: vfs
+  tags:
+    - kubernetes
+  image:
+    name: quay.io/buildah/stable:latest
+  before_script:
+    - buildah login -u "$CI_REGISTRY_USER" -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
+  script:
+    - buildah bud
+      -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}"
+      -f Dockerfile
+    - buildah tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
+    - buildah push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}"
+    - buildah push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
+
+#build-kaniko:
+#  stage: build
+#  tags:
+#    - kubernetes
+#  image:
+#    name: gcr.io/kaniko-project/executor:debug
+#    entrypoint: [ "" ]
+#  script:
+#    - mkdir -p /kaniko/.docker
+#    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+#    - pwd && ls -lah
+#    - /kaniko/executor --use-new-run --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --build-arg GO_MODULES_USER=${GO_MODULES_USER} --build-arg GO_MODULES_TOKEN=${GO_MODULES_TOKEN} --destination ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}-kaniko
