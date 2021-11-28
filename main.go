@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,7 +28,9 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/Moulick/Kinesis2Elastic/gzipbinding"
+	"github.com/Moulick/Kinesis2Elastic/incoming"
 	"github.com/Moulick/Kinesis2Elastic/log"
+	"github.com/Moulick/Kinesis2Elastic/outgoing"
 )
 
 const (
@@ -57,28 +58,6 @@ type firehoseErrorBody struct {
 	RequestId string `json:"requestId"`
 	Timestamp int64  `json:"timestamp"`
 	Error     string `json:"errorMessage"`
-}
-
-// incomingFirehose is the data that firehose sends for HTTP Endpoint Destination
-// Timestamp is epoch in milliseconds
-// https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html
-type incomingFirehose struct {
-	RequestID string   `binding:"required" json:"requestId"`
-	Timestamp int64    `binding:"required" json:"timestamp"`
-	Records   []record `binding:"required" json:"records"`
-}
-
-// record is one record in the request
-// Data is a base64 encoded string
-type record struct {
-	Data string `json:"data"`
-}
-
-// document is the body sent to ElasticSearch
-type document struct {
-	TimeStamp time.Time       `json:"@timestamp"`
-	Log       json.RawMessage `json:"log,inline"`
-	RequestID string          `json:"requestId"`
 }
 
 // dataDetect detects the content type and encoding of the request body.
@@ -200,12 +179,12 @@ func main() {
 	suggar.Infow("ElasticSearch Output Index", "index", outputIndex)
 	suggar.Infow("ElasticSearch worker threads", "workers", numWorkers)
 
-	// suggar.Debug("DEBUG LOG")
-	// suggar.Info("INFO LOG")
-	// suggar.Warn("WARN LOG")
-	// suggar.Error("ERROR LOG")
-	// suggar.DPanic("PANIC LOG")
-	// suggar.Fatal("FATAL LOG")
+	suggar.Debug("DEBUG LOG")
+	suggar.Info("INFO LOG")
+	suggar.Warn("WARN LOG")
+	suggar.Error("ERROR LOG")
+	suggar.DPanic("PANIC LOG")
+	suggar.Fatal("FATAL LOG")
 
 	if !opts.Development {
 		gin.SetMode(gin.ReleaseMode)
@@ -259,7 +238,7 @@ func main() {
 	r.POST("/firehose", func(c *gin.Context) {
 		var (
 			zaplog       *zap.SugaredLogger
-			dataIncoming incomingFirehose
+			dataIncoming incoming.FirehoseRequest
 		)
 
 		// Extract the Firehose Request ID and set the logger to add to every log message
@@ -455,37 +434,52 @@ func getBulkIndexer(c *gin.Context, elasticURL string, authHeader string, zapCon
 }
 
 // splitRecords splits the incoming record into a slice of document
-func splitRecords(dataIncoming incomingFirehose, XAmzFirehoseRequestID string, logger *zap.SugaredLogger) ([]document, error) {
-	var documents []document
+func splitRecords(dataIncoming incoming.FirehoseRequest, XAmzFirehoseRequestID string, logger *zap.SugaredLogger) ([]outgoing.Document, error) {
+	var documents []outgoing.Document
 
 	// iterate over all the records to split them into separate documents
 	for _, i := range dataIncoming.Records {
-		decodedRecord, err := base64.StdEncoding.DecodeString(i.Data)
-		if err != nil {
-			logger.Fatalw("Failed decoding record data", "err", err)
-			return []document{}, err
-		}
-		// logger.Debugw("decoded record from kinesis", "Record", decodedRecord)
+		for _, j := range i.Data.LogEvents {
+			decodedRecord := json.RawMessage{}
+			err := json.Unmarshal([]byte(j.Message), &decodedRecord)
+			if err != nil {
+				logger.Fatalw("Failed decoding record data", "err", err)
+				return []outgoing.Document{}, err
+			}
+			logger.Debugw("decoded record from kinesis", "Record", decodedRecord)
 
-		event := document{
-			TimeStamp: time.UnixMilli(dataIncoming.Timestamp).UTC(),
-			Log:       decodedRecord,
-			RequestID: XAmzFirehoseRequestID,
+			event := outgoing.Document{
+				RequestID: XAmzFirehoseRequestID,
+				TimeStamp: time.UnixMilli(dataIncoming.Timestamp).UTC(),
+				Record: outgoing.Record{
+					Data: outgoing.Data{
+						MessageType:         i.Data.MessageType,
+						Owner:               i.Data.Owner,
+						LogGroup:            i.Data.LogGroup,
+						LogStream:           i.Data.LogStream,
+						SubscriptionFilters: i.Data.SubscriptionFilters,
+						LogEvent: outgoing.LogEvent{
+							ID:        j.ID,
+							Timestamp: time.UnixMilli(j.Timestamp).UTC(),
+							Message:   decodedRecord,
+						},
+					},
+				},
+			}
+			// Make sure the document is valid
+			if _, err = json.Marshal(i); err != nil {
+				logger.Errorw("Failed to marshal record to Json", "err", err)
+				return []outgoing.Document{}, err
+			}
+			documents = append(documents, event)
 		}
-		// Make sure the document is valid
-		if _, err = json.Marshal(i); err != nil {
-			logger.Errorw("Failed to marshal record to Json", "err", err)
-			return []document{}, err
-		}
-
-		documents = append(documents, event)
 	}
 
 	return documents, nil
 }
 
 // queueBulkIndex adds the documents to the getBulkIndexer
-func queueBulkIndex(documents []document, countSuccessful uint64, bi esutil.BulkIndexer, logger *zap.SugaredLogger) error {
+func queueBulkIndex(documents []outgoing.Document, countSuccessful uint64, bi esutil.BulkIndexer, logger *zap.SugaredLogger) error {
 	// loop over the documents and add them to the bulk indexer
 	for _, d := range documents {
 		documentByte, err := json.Marshal(d)

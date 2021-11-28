@@ -40,6 +40,11 @@ kind: Deployment
 metadata:
   name: kinesis2elastic
   namespace: mla
+  annotations:
+    keel.sh/match-tag: "true"
+    keel.sh/policy: force
+    keel.sh/pollSchedule: '@every 2m'
+    keel.sh/trigger: poll
   labels:
     app.kubernetes.io/name: kinesis2elastic
     app.kubernetes.io/instance: kinesis2elastic
@@ -113,10 +118,10 @@ metadata:
     app.kubernetes.io/version: "0.1"
 spec:
   rules:
-    - host: "kinesis-ingest.dev.dev.ontrack3.hilti.cloud"
+    - host: dummy.com
       http:
         paths:
-          - path: /
+          - path: /firehose
             pathType: Prefix
             backend:
               service:
