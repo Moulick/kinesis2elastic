@@ -12,7 +12,7 @@ import (
 type Document struct {
 	RequestID string    `json:"requestId"`
 	TimeStamp time.Time `json:"@timestamp"`
-	Record   Record    `json:"records"`
+	Record    Record    `json:"records"`
 }
 
 type Record struct {
@@ -25,11 +25,11 @@ type Data struct {
 	LogGroup            string   `json:"logGroup"`
 	LogStream           string   `json:"logStream"`
 	SubscriptionFilters []string `json:"subscriptionFilters"`
-	LogEvent           LogEvent `json:"logEvents"`
+	LogEvent            LogEvent `json:"logEvents"`
 }
 
 type LogEvent struct {
 	ID        string          `json:"id"`
-	Timestamp time.Time           `json:"timestamp"`
+	Timestamp time.Time       `json:"timestamp"`
 	Message   json.RawMessage `json:"message"`
 }

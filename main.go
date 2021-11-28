@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -82,15 +83,15 @@ func dataDetect(c *gin.Context, logger *zap.SugaredLogger) (error, string) {
 	}
 
 	// Duplicate the body, as like when we do detection, it closes the body
-	body, err := ioutil.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		return err, ""
 	}
 	// Restore the request body to its original state
-	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	// convert body to bytes
-	reqBodyBytes, err := io.ReadAll(ioutil.NopCloser(bytes.NewBuffer(body)))
+	reqBodyBytes, err := io.ReadAll(io.NopCloser(bytes.NewBuffer(body)))
 	if err != nil {
 		return err, ""
 	}
@@ -183,8 +184,8 @@ func main() {
 	suggar.Info("INFO LOG")
 	suggar.Warn("WARN LOG")
 	suggar.Error("ERROR LOG")
-	suggar.DPanic("PANIC LOG")
-	suggar.Fatal("FATAL LOG")
+	// suggar.Panic("PANIC LOG")
+	// suggar.Fatal("FATAL LOG")
 
 	if !opts.Development {
 		gin.SetMode(gin.ReleaseMode)
@@ -241,6 +242,11 @@ func main() {
 			dataIncoming incoming.FirehoseRequest
 		)
 
+		body, _ := io.ReadAll(c.Request.Body)                // TODO: remove this
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // TODO: remove this
+		fmt.Println(string(body))                            // TODO: remove this
+		fmt.Println(json.Marshal(c.Request.Header))          // TODO: remove this
+
 		// Extract the Firehose Request ID and set the logger to add to every log message
 		XAmzFirehoseRequestID := c.Request.Header.Get("X-Amz-Firehose-Request-Id")
 		if XAmzFirehoseRequestID != "" {
@@ -263,6 +269,7 @@ func main() {
 
 		// switch on detected content type, ignoring the header and
 		// unmarshal the request body to incomingFirehose type
+		zaplog.Debugw("Content type decided", "contentType", contentType)
 		switch contentType {
 		case MIMEGZIP:
 			if err = c.ShouldBindBodyWith(&dataIncoming, gzipbinding.GzipJSONBinding{}); err != nil {
@@ -438,39 +445,76 @@ func splitRecords(dataIncoming incoming.FirehoseRequest, XAmzFirehoseRequestID s
 	var documents []outgoing.Document
 
 	// iterate over all the records to split them into separate documents
-	for _, i := range dataIncoming.Records {
-		for _, j := range i.Data.LogEvents {
-			decodedRecord := json.RawMessage{}
-			err := json.Unmarshal([]byte(j.Message), &decodedRecord)
+	for _, record := range dataIncoming.Records {
+		data := incoming.Data{}
+		// first decode the incoming data
+		decodedCompressedRecord, err := base64.StdEncoding.DecodeString(record.Data)
+		if err != nil {
+			logger.Errorw("Failed base64 decoding compressed record",
+				"err", err,
+				"record", record,
+			)
+			return []outgoing.Document{}, err
+		}
+		// then decompress the data
+		uncompressedRecord, err := gzip.NewReader(bytes.NewReader(decodedCompressedRecord))
+		if err != nil {
+			logger.Errorw("Failed to uncompress record",
+				"err", err,
+				"record", record.Data,
+			)
+			return []outgoing.Document{}, err
+		}
+		// then try to unmarshall the uncompressed data
+		err = json.NewDecoder(uncompressedRecord).Decode(&data)
+		if err != nil {
+			logger.Errorw("Failed to decode record",
+				"err", err,
+				"record", uncompressedRecord,
+			)
+			return []outgoing.Document{}, err
+		}
+		logger.Debugw("Decoded record from kinesis", "record", data)
+
+		// now loop over the log events and create a document for each
+		for _, logEvent := range data.LogEvents {
+			// used a json.rawMessage as the event can have any json structure
+			cwEvent := json.RawMessage{}
+			err = json.Unmarshal([]byte(logEvent.Message), &cwEvent)
 			if err != nil {
-				logger.Fatalw("Failed decoding record data", "err", err)
+				logger.Errorw("Failed to unmarshal LogEvent",
+					"err", err,
+					"record", logEvent,
+				)
 				return []outgoing.Document{}, err
 			}
-			logger.Debugw("decoded record from kinesis", "Record", decodedRecord)
-
+			// Now we finally have a valid CloudWatch event
+			// create a new document
 			event := outgoing.Document{
 				RequestID: XAmzFirehoseRequestID,
 				TimeStamp: time.UnixMilli(dataIncoming.Timestamp).UTC(),
 				Record: outgoing.Record{
 					Data: outgoing.Data{
-						MessageType:         i.Data.MessageType,
-						Owner:               i.Data.Owner,
-						LogGroup:            i.Data.LogGroup,
-						LogStream:           i.Data.LogStream,
-						SubscriptionFilters: i.Data.SubscriptionFilters,
+						MessageType:         data.MessageType,
+						Owner:               data.Owner,
+						LogGroup:            data.LogGroup,
+						LogStream:           data.LogStream,
+						SubscriptionFilters: data.SubscriptionFilters,
 						LogEvent: outgoing.LogEvent{
-							ID:        j.ID,
-							Timestamp: time.UnixMilli(j.Timestamp).UTC(),
-							Message:   decodedRecord,
+							// make sure to use logEvent.Timestamp as the logevent timestamp is usually different from the kinesis request timestamp, as firehose batches and buffers the records
+							ID:        logEvent.ID,
+							Timestamp: time.UnixMilli(logEvent.Timestamp).UTC(),
+							Message:   cwEvent,
 						},
 					},
 				},
 			}
 			// Make sure the document is valid
-			if _, err = json.Marshal(i); err != nil {
+			if _, err = json.Marshal(record); err != nil {
 				logger.Errorw("Failed to marshal record to Json", "err", err)
 				return []outgoing.Document{}, err
 			}
+			// add the document to the list of documents to send to bulkIndexer in one go
 			documents = append(documents, event)
 		}
 	}

@@ -25,7 +25,7 @@ type FirehoseRequest struct {
 }
 
 type Record struct {
-	Data Data `json:"data"`
+	Data string `json:"data"`
 }
 
 type Data struct {
