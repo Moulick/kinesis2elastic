@@ -66,8 +66,8 @@ spec:
       serviceAccountName: kinesis2elastic
       containers:
         - name: kinesis2elastic
-          image: "moulick/kinesis2elastic:latest"
-          imagePullPolicy: IfNotPresent
+          image: moulick/kinesis2elastic:latest
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
