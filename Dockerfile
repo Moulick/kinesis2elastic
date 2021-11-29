@@ -12,6 +12,8 @@ RUN go mod download -x
 
 # Copy the go source
 COPY gzipbinding/ gzipbinding/
+COPY incoming/ incoming/
+COPY outgoing/ outgoing/
 COPY log/ log/
 COPY main.go main.go
 
