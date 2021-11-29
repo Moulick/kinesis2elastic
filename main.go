@@ -242,10 +242,10 @@ func main() {
 			dataIncoming incoming.FirehoseRequest
 		)
 
-		body, _ := io.ReadAll(c.Request.Body)                // TODO: remove this
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // TODO: remove this
-		fmt.Println(string(body))                            // TODO: remove this
-		fmt.Println(json.Marshal(c.Request.Header))          // TODO: remove this
+		// body, _ := io.ReadAll(c.Request.Body)                // TODO: remove this
+		// c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // TODO: remove this
+		// fmt.Println(string(body))                            // TODO: remove this
+		// fmt.Println(json.Marshal(c.Request.Header))          // TODO: remove this
 
 		// Extract the Firehose Request ID and set the logger to add to every log message
 		XAmzFirehoseRequestID := c.Request.Header.Get("X-Amz-Firehose-Request-Id")
