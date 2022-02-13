@@ -242,10 +242,10 @@ func main() {
 			dataIncoming incoming.FirehoseRequest
 		)
 
-		// body, _ := io.ReadAll(c.Request.Body)                // TODO: remove this
-		// c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // TODO: remove this
-		// fmt.Println(string(body))                            // TODO: remove this
-		// fmt.Println(json.Marshal(c.Request.Header))          // TODO: remove this
+		//body, _ := io.ReadAll(c.Request.Body)                // TODO: remove this
+		//c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // TODO: remove this
+		//fmt.Println(string(body))                            // TODO: remove this
+		//fmt.Println(json.Marshal(c.Request.Header))          // TODO: remove this
 
 		// Extract the Firehose Request ID and set the logger to add to every log message
 		XAmzFirehoseRequestID := c.Request.Header.Get("X-Amz-Firehose-Request-Id")
@@ -482,11 +482,19 @@ func splitRecords(dataIncoming incoming.FirehoseRequest, XAmzFirehoseRequestID s
 			cwEvent := json.RawMessage{}
 			err = json.Unmarshal([]byte(logEvent.Message), &cwEvent)
 			if err != nil {
-				logger.Errorw("Failed to unmarshal LogEvent",
-					"err", err,
-					"record", logEvent,
+				// if the event is not a json structure, just can save it as string
+				logger.Debugw("Not a json LogEvent")
+				cwEvent, err = json.Marshal(struct {
+					Text string `json:"text"`
+				}{
+					Text: logEvent.Message},
 				)
-				return []outgoing.Document{}, err
+				if err != nil {
+					logger.Errorw("Failed to marshal stringLog", "err", err, "stringLog", logEvent.Message)
+					return []outgoing.Document{}, err
+				}
+				//cwEvent = json.RawMessage([]byte())
+				//return []outgoing.Document{}, err
 			}
 			// Now we finally have a valid CloudWatch event
 			// create a new document
