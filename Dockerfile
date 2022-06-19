@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.17 as builder
+FROM docker.io/library/golang:1.18 as builder
 MAINTAINER Moulick Aggarawl <moulickaggarwal@gmail.com>
 
 WORKDIR /app
@@ -16,6 +16,7 @@ COPY incoming/ incoming/
 COPY outgoing/ outgoing/
 COPY log/ log/
 COPY main.go main.go
+COPY ingest/ ingest/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o kinesis2elastic main.go
