@@ -1,0 +1,14 @@
+{
+  "description": "Pipeline for triggering other pipelines",
+  "processors": [
+    {
+      "pipeline": {
+        "name": "axway-ingest",
+        "description": "Trigger if the data is from Axway",
+        "if": "ctx.records?.data?.logGroup =~ /axway/",
+        "tag": "axway",
+        "ignore_failure": true
+      }
+    }
+  ]
+}
