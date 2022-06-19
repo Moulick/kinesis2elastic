@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -33,6 +34,12 @@ import (
 	"github.com/Moulick/Kinesis2Elastic/log"
 	"github.com/Moulick/Kinesis2Elastic/outgoing"
 )
+
+//go:embed ingest/axway-ingest.json
+var axwayIngest string
+
+//go:embed ingest/one-pipeline-to-rule-them-all.json
+var onePipelineToRuleThemAll string
 
 const (
 	numWorkers         = 3
@@ -127,11 +134,13 @@ func main() {
 		outputIndex     string
 		countSuccessful uint64
 		port            string
+		elasticPipeline string
 	)
 
 	flag.StringVar(&elasticURL, "elastic_url", "http://localhost:9200", "URL of the ElasticSearch Cluster with schema and optional Port")
 	flag.StringVar(&outputIndex, "output_index", "firehose-output", "output_index name to create documents, output_index will be created if does not exist")
 	flag.StringVar(&port, "port", "8080", "port to listen on")
+	flag.StringVar(&elasticPipeline, "elastic_pipeline", "one-pipeline-to-rule-them-all", "pipeline to use for ElasticSearch")
 	// zap logger setup
 	opts := log.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -313,7 +322,7 @@ func main() {
 		// it's supposed to be base64 of username:password
 		authHeader := c.Request.Header.Get(incomingAuthHeader)
 
-		bi, err := getBulkIndexer(c, elasticURL, authHeader, zapConfig, outputIndex, XAmzFirehoseRequestID, zaplog)
+		bi, err := getBulkIndexer(c, elasticURL, elasticPipeline, authHeader, zapConfig, outputIndex, XAmzFirehoseRequestID, zaplog)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
 				RequestId: XAmzFirehoseRequestID,
@@ -388,7 +397,7 @@ func main() {
 }
 
 // getBulkIndexer returns a new elasticSearch client and BulkIndexer
-func getBulkIndexer(c *gin.Context, elasticURL string, authHeader string, zapConfig zap.Config, outputIndex string, XAmzFirehoseRequestID string, logger *zap.SugaredLogger) (esutil.BulkIndexer, error) {
+func getBulkIndexer(c *gin.Context, elasticURL string, elasticPipeline string, authHeader string, zapConfig zap.Config, outputIndex string, XAmzFirehoseRequestID string, logger *zap.SugaredLogger) (esutil.BulkIndexer, error) {
 	// exponential backoff to prevent overloading elasticsearch
 	retryBackoff := backoff.NewExponentialBackOff()
 	cfg := elasticsearch.Config{
@@ -425,6 +434,7 @@ func getBulkIndexer(c *gin.Context, elasticURL string, authHeader string, zapCon
 		NumWorkers:    numWorkers,      // The number of worker goroutines TODO: make a flag
 		FlushBytes:    flushBytes,      // The flush threshold in bytes  TODO: make a flag
 		FlushInterval: 5 * time.Second, // The periodic flush interval TODO: make a flag
+		Pipeline:      elasticPipeline, // The pipeline to use for the indexing
 	})
 	if err != nil {
 		// logger.Fatalw("Failed creating BulkIndexer",
