@@ -42,7 +42,7 @@ dockers:
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
       - "moulick/{{ .ProjectName }}:{{ .Tag }}-amd64"
-      - "moulick/{{ .ProjectName }}:{{ .Major }}-amd64"
+      - "moulick/{{ .ProjectName }}:v{{ .Major }}-amd64"
       - "moulick/{{ .ProjectName }}:latest-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
@@ -57,7 +57,7 @@ dockers:
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
       - "moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8"
-      - "moulick/{{ .ProjectName }}:{{ .Major }}-arm64v8"
+      - "moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8"
       - "moulick/{{ .ProjectName }}:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
@@ -73,7 +73,7 @@ dockers:
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
       - "moulick/{{ .ProjectName }}:{{ .Tag }}-armv6"
-      - "moulick/{{ .ProjectName }}:{{ .Major }}-armv6"
+      - "moulick/{{ .ProjectName }}:v{{ .Major }}-armv6"
       - "moulick/{{ .ProjectName }}:latest-armv6"
     build_flag_templates:
       - "--platform=linux/arm/v6"
@@ -89,7 +89,7 @@ dockers:
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
       - "moulick/{{ .ProjectName }}:{{ .Tag }}-armv7"
-      - "moulick/{{ .ProjectName }}:{{ .Major }}-armv7"
+      - "moulick/{{ .ProjectName }}:v{{ .Major }}-armv7"
       - "moulick/{{ .ProjectName }}:latest-armv7"
     build_flag_templates:
       - "--platform=linux/arm/v7"
@@ -102,16 +102,16 @@ docker_manifests:
   # https://goreleaser.com/customization/docker_manifest/
   - name_template: moulick/{{ .ProjectName }}:{{ .Tag }}
     image_templates:
-      - moulick/{{ .ProjectName }}:{{ .Tag}}-amd64
-      - moulick/{{ .ProjectName }}:{{ .Tag}}-arm64v8
-      - moulick/{{ .ProjectName }}:{{ .Tag}}-armv6
-      - moulick/{{ .ProjectName }}:{{ .Tag}}-armv7
-  - name_template: moulick/{{ .ProjectName }}:{{ .Major }}
+      - moulick/{{ .ProjectName }}:{{ .Tag }}-amd64
+      - moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8
+      - moulick/{{ .ProjectName }}:{{ .Tag }}-armv6
+      - moulick/{{ .ProjectName }}:{{ .Tag }}-armv7
+  - name_template: moulick/{{ .ProjectName }}:v{{ .Major }}
     image_templates:
-      - moulick/{{ .ProjectName }}:{{ .Major }}-amd64
-      - moulick/{{ .ProjectName }}:{{ .Major }}-arm64v8
-      - moulick/{{ .ProjectName }}:{{ .Major }}-armv6
-      - moulick/{{ .ProjectName }}:{{ .Major }}-armv7
+      - moulick/{{ .ProjectName }}:v{{ .Major }}-amd64
+      - moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8
+      - moulick/{{ .ProjectName }}:v{{ .Major }}-armv6
+      - moulick/{{ .ProjectName }}:v{{ .Major }}-armv7
   - name_template: moulick/{{ .ProjectName }}:latest
     image_templates:
       - moulick/{{ .ProjectName }}:latest-amd64
