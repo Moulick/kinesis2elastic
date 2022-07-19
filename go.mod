@@ -9,7 +9,7 @@ require (
 	github.com/gin-contrib/zap v0.0.2
 	github.com/gin-gonic/gin v1.7.7
 	github.com/jnovack/flag v1.16.0
-	go.uber.org/zap v1.19.1
+	go.uber.org/zap v1.21.0
 )
 
 require (
