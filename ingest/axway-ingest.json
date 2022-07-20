@@ -1,11 +1,11 @@
 {
-  "description": "Pipeline for parsing Apache HTTP Server access logs. Requires the geoip and user_agent plugins.",
+  "description": "Pipeline for parsing Axway HTTP Server access logs.",
   "processors": [
     {
       "grok": {
         "field": "records.data.logEvents.message.text",
         "patterns": [
-          "%{HOSTNAME:remote.host} - %{HTTPDUSER:user.name} \\[%{HTTPDATE:apache.access.time}\\]  \"(?:%{WORD:http.request.method} %{DATA:_tmp.url_orig} HTTP/%{NUMBER:http.version}|-)?\" %{NUMBER:http.response.status_code:long} (?:%{NUMBER:http.response.body.bytes:long}|-) %{NUMBER:http.response.time:long} \"%{IPORHOST:source.address}\" %{DATA:hc.request.clientid} (%{DATA:hc.transactionid}|-) %{GREEDYDATA:hc.correlationid}"
+          "%{HOSTNAME:remote.host} - %{HTTPDUSER:user.name} \\[%{HTTPDATE:apache.access.time}\\]  \"(?:%{WORD:http.request.method} %{DATA:_tmp.url_orig} HTTP/%{NUMBER:http.version}|-)?\" %{NUMBER:http.response.status_code:long} (?:%{NUMBER:http.response.body.bytes:long}|-) %{NUMBER:http.response.time:long} \"(?<x_forwarded_for>%{IP:source.address}(?:,[^,]+)*)\" %{DATA:hc.request.clientid} (%{DATA:hc.transactionid}|-) %{GREEDYDATA:hc.correlationid}"
         ],
         "ignore_missing": true
       }
