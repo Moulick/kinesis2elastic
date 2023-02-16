@@ -14,10 +14,12 @@ builds:
       - linux
       - windows
       - darwin
+      - js
     goarch:
       - amd64
       - arm64
       - arm
+      - wasm
     goarm:
       - "7"
       - "6"
@@ -25,13 +27,7 @@ builds:
       - -s -w
 
 archives:
-  - id: Kinesis2Elastic
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
+  - id: default
     format_overrides:
       - goos: windows
         format: zip
