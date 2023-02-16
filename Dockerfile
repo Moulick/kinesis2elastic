@@ -1,5 +1,4 @@
-FROM docker.io/library/golang:1.20.1 as builder
-LABEL org.opencontainers.image.authors=moulickaggarwal
+FROM docker.io/library/golang:1.20 as builder
 
 WORKDIR /app
 # Copy the Go Modules manifests
@@ -24,5 +23,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o kinesis2e
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM scratch
+LABEL org.opencontainers.image.source="https://github.com/Moulick/kinesis2elastic"
+LABEL org.opencontainers.image.url="https://github.com/Moulick/kinesis2elastic"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.title="Kinesis2Elastic"
+LABEL org.opencontainers.image.base.name="dockerhub.io/moulick/kinesis2elastic:latest"
 COPY --from=builder /app/kinesis2elastic /
 ENTRYPOINT ["/kinesis2elastic"]
