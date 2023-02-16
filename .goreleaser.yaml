@@ -109,24 +109,24 @@ dockers:
       - --label=org.opencontainers.image.url="https://github.com/Moulick/kinesis2elastic"
 docker_manifests:
   # https://goreleaser.com/customization/docker_manifest/
-  - name_template: doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}
+  - name_template: docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}
     image_templates:
-      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-amd64
-      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8
-      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv6
-      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv7
-  - name_template: doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-amd64
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv6
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv7
+  - name_template: docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}
     image_templates:
-      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-amd64
-      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8
-      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv6
-      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv7
-  - name_template: doker.io/moulick/{{ .ProjectName }}:latest
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-amd64
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv6
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv7
+  - name_template: docker.io/moulick/{{ .ProjectName }}:latest
     image_templates:
-      - doker.io/moulick/{{ .ProjectName }}:latest-amd64
-      - doker.io/moulick/{{ .ProjectName }}:latest-arm64v8
-      - doker.io/moulick/{{ .ProjectName }}:latest-armv6
-      - doker.io/moulick/{{ .ProjectName }}:latest-armv7
+      - docker.io/moulick/{{ .ProjectName }}:latest-amd64
+      - docker.io/moulick/{{ .ProjectName }}:latest-arm64v8
+      - docker.io/moulick/{{ .ProjectName }}:latest-armv6
+      - docker.io/moulick/{{ .ProjectName }}:latest-armv7
 
 checksum:
   name_template: 'checksums.txt'
