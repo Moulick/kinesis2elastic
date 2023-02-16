@@ -25,12 +25,13 @@ builds:
       - -s -w
 
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - id: Kinesis2Elastic
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
     format_overrides:
       - goos: windows
         format: zip
@@ -41,83 +42,95 @@ dockers:
     goarch: amd64
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
-      - "moulick/{{ .ProjectName }}:{{ .Tag }}-amd64"
-      - "moulick/{{ .ProjectName }}:v{{ .Major }}-amd64"
-      - "moulick/{{ .ProjectName }}:latest-amd64"
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-amd64
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-amd64
+      - docker.io/moulick/{{ .ProjectName }}:latest-amd64
     build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.authors=moulickaggarwal"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+      - --pull
+      - --platform=linux/amd64
+      - --label=org.opencontainers.image.authors=moulickaggarwal
+      - --label=org.opencontainers.image.created={{.Date}}
+      - --label=org.opencontainers.image.title={{.ProjectName}}
+      - --label=org.opencontainers.image.revision={{.FullCommit}}
+      - --label=org.opencontainers.image.version={{.Version}}
+      - --label=org.opencontainers.image.source="https://github.com/Moulick/kinesis2elastic"
+      - --label=org.opencontainers.image.url="https://github.com/Moulick/kinesis2elastic"
   - use: buildx
     goos: linux
     goarch: arm64
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
-      - "moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8"
-      - "moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8"
-      - "moulick/{{ .ProjectName }}:latest-arm64v8"
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8
+      - docker.io/moulick/{{ .ProjectName }}:latest-arm64v8
     build_flag_templates:
-      - "--platform=linux/arm64/v8"
-      - "--label=org.opencontainers.image.authors=moulickaggarwal"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+      - --pull
+      - --platform=linux/arm64/v8
+      - --label=org.opencontainers.image.authors=moulickaggarwal
+      - --label=org.opencontainers.image.created={{.Date}}
+      - --label=org.opencontainers.image.title={{.ProjectName}}
+      - --label=org.opencontainers.image.revision={{.FullCommit}}
+      - --label=org.opencontainers.image.version={{.Version}}
+      - --label=org.opencontainers.image.source="https://github.com/Moulick/kinesis2elastic"
+      - --label=org.opencontainers.image.url="https://github.com/Moulick/kinesis2elastic"
   - use: buildx
     goos: linux
     goarch: arm
     goarm: "6"
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
-      - "moulick/{{ .ProjectName }}:{{ .Tag }}-armv6"
-      - "moulick/{{ .ProjectName }}:v{{ .Major }}-armv6"
-      - "moulick/{{ .ProjectName }}:latest-armv6"
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv6
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv6
+      - docker.io/moulick/{{ .ProjectName }}:latest-armv6
     build_flag_templates:
-      - "--platform=linux/arm/v6"
-      - "--label=org.opencontainers.image.authors=moulickaggarwal"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+      - --pull
+      - --platform=linux/arm/v6
+      - --label=org.opencontainers.image.authors=moulickaggarwal
+      - --label=org.opencontainers.image.created={{.Date}}
+      - --label=org.opencontainers.image.title={{.ProjectName}}
+      - --label=org.opencontainers.image.revision={{.FullCommit}}
+      - --label=org.opencontainers.image.version={{.Version}}
+      - --label=org.opencontainers.image.source="https://github.com/Moulick/kinesis2elastic"
+      - --label=org.opencontainers.image.url="https://github.com/Moulick/kinesis2elastic"
   - use: buildx
     goos: linux
     goarch: arm
     goarm: "7"
     dockerfile: "goreleaser.Dockerfile"
     image_templates:
-      - "moulick/{{ .ProjectName }}:{{ .Tag }}-armv7"
-      - "moulick/{{ .ProjectName }}:v{{ .Major }}-armv7"
-      - "moulick/{{ .ProjectName }}:latest-armv7"
+      - docker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv7
+      - docker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv7
+      - docker.io/moulick/{{ .ProjectName }}:latest-armv7
     build_flag_templates:
-      - "--platform=linux/arm/v7"
-      - "--label=org.opencontainers.image.authors=moulickaggarwal"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+      - --pull
+      - --platform=linux/arm/v7
+      - --label=org.opencontainers.image.authors=moulickaggarwal
+      - --label=org.opencontainers.image.created={{.Date}}
+      - --label=org.opencontainers.image.title={{.ProjectName}}
+      - --label=org.opencontainers.image.revision={{.FullCommit}}
+      - --label=org.opencontainers.image.version={{.Version}}
+      - --label=org.opencontainers.image.source="https://github.com/Moulick/kinesis2elastic"
+      - --label=org.opencontainers.image.url="https://github.com/Moulick/kinesis2elastic"
 docker_manifests:
   # https://goreleaser.com/customization/docker_manifest/
-  - name_template: moulick/{{ .ProjectName }}:{{ .Tag }}
+  - name_template: doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}
     image_templates:
-      - moulick/{{ .ProjectName }}:{{ .Tag }}-amd64
-      - moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8
-      - moulick/{{ .ProjectName }}:{{ .Tag }}-armv6
-      - moulick/{{ .ProjectName }}:{{ .Tag }}-armv7
-  - name_template: moulick/{{ .ProjectName }}:v{{ .Major }}
+      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-amd64
+      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-arm64v8
+      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv6
+      - doker.io/moulick/{{ .ProjectName }}:{{ .Tag }}-armv7
+  - name_template: doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}
     image_templates:
-      - moulick/{{ .ProjectName }}:v{{ .Major }}-amd64
-      - moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8
-      - moulick/{{ .ProjectName }}:v{{ .Major }}-armv6
-      - moulick/{{ .ProjectName }}:v{{ .Major }}-armv7
-  - name_template: moulick/{{ .ProjectName }}:latest
+      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-amd64
+      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-arm64v8
+      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv6
+      - doker.io/moulick/{{ .ProjectName }}:v{{ .Major }}-armv7
+  - name_template: doker.io/moulick/{{ .ProjectName }}:latest
     image_templates:
-      - moulick/{{ .ProjectName }}:latest-amd64
-      - moulick/{{ .ProjectName }}:latest-arm64v8
-      - moulick/{{ .ProjectName }}:latest-armv6
-      - moulick/{{ .ProjectName }}:latest-armv7
+      - doker.io/moulick/{{ .ProjectName }}:latest-amd64
+      - doker.io/moulick/{{ .ProjectName }}:latest-arm64v8
+      - doker.io/moulick/{{ .ProjectName }}:latest-armv6
+      - doker.io/moulick/{{ .ProjectName }}:latest-armv7
 
 checksum:
   name_template: 'checksums.txt'

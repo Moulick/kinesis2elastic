@@ -1,4 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
+Metadata:
+  Author: Moulick Aggarwal
+  Github: https://github.com/Moulick/kinesis2elastic
+  License: GNU General Public License v3.0
 Description: This template creates all the necessary resources to setup a cross account log delivery for a given account.
 Parameters:
   FirehoseName:
