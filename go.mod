@@ -3,7 +3,7 @@ module github.com/Moulick/Kinesis2Elastic
 go 1.20
 
 require (
-	github.com/Depado/ginprom v1.7.8
+	github.com/Depado/ginprom v1.7.9
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/elastic/go-elasticsearch/v7 v7.17.7
 	github.com/gin-contrib/zap v0.1.0
