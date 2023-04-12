@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   elasticsearch:
-    image: docker.io/bitnami/elasticsearch:7.13.1
+    image: docker.io/bitnami/elasticsearch:8.7.0
     ports:
       - "9200:9200"
       - "9300:9300"
