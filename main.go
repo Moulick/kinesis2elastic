@@ -20,12 +20,12 @@ import (
 
 	"github.com/Depado/ginprom"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/elastic/go-elasticsearch/v7/estransport"
-	"github.com/elastic/go-elasticsearch/v7/esutil"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/jnovack/flag"
+	"github.com/opensearch-project/opensearch-go"
+	"github.com/opensearch-project/opensearch-go/opensearchtransport"
+	"github.com/opensearch-project/opensearch-go/opensearchutil"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -131,17 +131,17 @@ func main() {
 	defer stop()
 
 	var (
-		elasticURL      string
-		outputIndex     string
-		countSuccessful uint64
-		port            string
-		elasticPipeline string
+		opensearchURL      string
+		outputIndex        string
+		countSuccessful    uint64
+		port               string
+		openSearchPipeline string
 	)
 
-	flag.StringVar(&elasticURL, "elastic_url", "http://localhost:9200", "URL of the ElasticSearch Cluster with schema and optional Port")
+	flag.StringVar(&opensearchURL, "opensearch_url", "http://localhost:9200", "URL of the OpenSearch Cluster with schema and optional Port")
 	flag.StringVar(&outputIndex, "output_index", "firehose-output", "output_index name to create documents, output_index will be created if does not exist")
 	flag.StringVar(&port, "port", "8080", "port to listen on")
-	flag.StringVar(&elasticPipeline, "elastic_pipeline", "one-pipeline-to-rule-them-all", "pipeline to use for ElasticSearch")
+	flag.StringVar(&openSearchPipeline, "opensearch_pipeline", "one-pipeline-to-rule-them-all", "pipeline to use for OpenSearch")
 	// zap logger setup
 	opts := log.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -185,9 +185,9 @@ func main() {
 	suggar := logger.Sugar()
 
 	suggar.Infof("Log Level is %s", zapConfig.Level.String())
-	suggar.Infow("ElasticSearch URL is ", "URL", elasticURL)
-	suggar.Infow("ElasticSearch Output Index", "index", outputIndex)
-	suggar.Infow("ElasticSearch worker threads", "workers", numWorkers)
+	suggar.Infow("OpenSearch URL is ", "URL", opensearchURL)
+	suggar.Infow("OpenSearch Output Index", "index", outputIndex)
+	suggar.Infow("OpenSearch worker threads", "workers", numWorkers)
 
 	suggar.Debug("DEBUG LOG")
 	suggar.Info("INFO LOG")
@@ -225,12 +225,12 @@ func main() {
 
 	/*
 		firehose API is designed to be invoked by AWS Kinesis Firehose Delivery Stream
-		It takes the incoming data, breaks up the records into individual ElasticSearch Documents
+		It takes the incoming data, breaks up the records into individual OpenSearch Documents
 		It reuses the same X-Amz-Firehose-Request-Id for all the documents which were part of the same request
-		It also converts the timestamp to @timestamp that elasticSearch can understand
-		It passes on the X-Amz-Firehose-Access-Key from the request to ElasticSearch basic auth,
+		It also converts the timestamp to @timestamp that OpenSearch can understand
+		It passes on the X-Amz-Firehose-Access-Key from the request to OpenSearch basic auth,
 			the X-Amz-Firehose-Access-Key is expected to be a base64 encoded username:password
-		It uses the bulk output_index api of elasticSearch for best performance
+		It uses the bulk output_index api of OpenSearch for best performance
 	*/
 	// Example Json
 	// {
@@ -322,7 +322,7 @@ func main() {
 		// it's supposed to be base64 of username:password
 		authHeader := c.Request.Header.Get(incomingAuthHeader)
 
-		bi, err := getBulkIndexer(c, elasticURL, elasticPipeline, authHeader, zapConfig, outputIndex, XAmzFirehoseRequestID, zaplog)
+		bi, err := getBulkIndexer(c, opensearchURL, openSearchPipeline, authHeader, zapConfig, outputIndex, XAmzFirehoseRequestID, zaplog)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
 				RequestID: XAmzFirehoseRequestID,
@@ -396,19 +396,19 @@ func main() {
 	suggar.Info("Server exiting")
 }
 
-// getBulkIndexer returns a new elasticSearch client and BulkIndexer
-func getBulkIndexer(c *gin.Context, elasticURL string, elasticPipeline string, authHeader string, zapConfig zap.Config, outputIndex string, xAmzFirehoseRequestID string, logger *zap.SugaredLogger) (esutil.BulkIndexer, error) {
-	// exponential backoff to prevent overloading elasticsearch
+// getBulkIndexer returns a new opensearch client and BulkIndexer
+func getBulkIndexer(c *gin.Context, opensearchURL string, opensearchPipeline string, authHeader string, zapConfig zap.Config, outputIndex string, XAmzFirehoseRequestID string, logger *zap.SugaredLogger) (opensearchutil.BulkIndexer, error) {
+	// exponential backoff to prevent overloading opensearch
 	retryBackoff := backoff.NewExponentialBackOff()
-	cfg := elasticsearch.Config{
+	cfg := opensearch.Config{
 		RetryBackoff: func(i int) time.Duration {
 			if i == 1 {
 				retryBackoff.Reset()
 			}
 			return retryBackoff.NextBackOff()
 		},
-		Logger:        &estransport.JSONLogger{Output: os.Stdout}, // EnableResponseBody: true, // EnableRequestBody:  true,
-		Addresses:     []string{elasticURL},
+		Logger:        &opensearchtransport.JSONLogger{Output: os.Stdout}, // EnableResponseBody: true, // EnableRequestBody:  true,
+		Addresses:     []string{opensearchURL},
 		RetryOnStatus: []int{502, 503, 504, 429},
 		// the authHeader extracted above is passed on as it is for auth basic
 		Header: http.Header(map[string][]string{"Authorization": {"Basic " + authHeader}}),
@@ -416,32 +416,32 @@ func getBulkIndexer(c *gin.Context, elasticURL string, elasticPipeline string, a
 	// more colourful logs when in debug mode
 	if zapConfig.Level.Level() == zapcore.DebugLevel {
 		cfg.EnableDebugLogger = true
-		cfg.Logger = &estransport.ColorLogger{Output: os.Stdout}
+		cfg.Logger = &opensearchtransport.ColorLogger{Output: os.Stdout}
 	}
 
-	// The only issue here is that the es client is created on every api call, I don't know how bad that is
+	// The only issue here is that the opensearch client is created on every api call, I don't know how bad that is
 	// This is currently necessary to extract the auth header from the request and pass it on to ES
-	es, err := elasticsearch.NewClient(cfg)
+	client, err := opensearch.NewClient(cfg)
 	if err != nil {
-		logger.Fatalw("Failed creating es client",
+		logger.Fatalw("Failed creating client client",
 			"err", err,
 		)
 	}
 	// create a new bulk Indexer
-	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
+	bi, err := opensearchutil.NewBulkIndexer(opensearchutil.BulkIndexerConfig{
 		Index:         outputIndex,
-		Client:        es,
-		NumWorkers:    numWorkers,      // The number of worker goroutines TODO: make a flag
-		FlushBytes:    flushBytes,      // The flush threshold in bytes  TODO: make a flag
-		FlushInterval: 5 * time.Second, // The periodic flush interval TODO: make a flag
-		Pipeline:      elasticPipeline, // The pipeline to use for the indexing
+		Client:        client,
+		NumWorkers:    numWorkers,         // The number of worker goroutines TODO: make a flag
+		FlushBytes:    flushBytes,         // The flush threshold in bytes  TODO: make a flag
+		FlushInterval: 5 * time.Second,    // The periodic flush interval TODO: make a flag
+		Pipeline:      opensearchPipeline, // The pipeline to use for the indexing
 	})
 	if err != nil {
 		// logger.Fatalw("Failed creating BulkIndexer",
 		// 	"err", err,
 		// )
 		c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
-			RequestID: xAmzFirehoseRequestID,
+			RequestID: XAmzFirehoseRequestID,
 			Timestamp: time.Now().UTC().UnixMilli(),
 			Error:     err.Error(),
 		})
@@ -543,7 +543,7 @@ func splitRecords(dataIncoming incoming.FirehoseRequest, xAmzFirehoseRequestID s
 }
 
 // queueBulkIndex adds the documents to the getBulkIndexer
-func queueBulkIndex(documents []outgoing.Document, countSuccessful uint64, bi esutil.BulkIndexer, logger *zap.SugaredLogger) error {
+func queueBulkIndex(documents []outgoing.Document, countSuccessful uint64, bi opensearchutil.BulkIndexer, logger *zap.SugaredLogger) error {
 	// loop over the documents and add them to the bulk indexer
 	for _, d := range documents {
 		documentByte, err := json.Marshal(d)
@@ -552,18 +552,18 @@ func queueBulkIndex(documents []outgoing.Document, countSuccessful uint64, bi es
 			return err
 		}
 
-		item := esutil.BulkIndexerItem{
+		item := opensearchutil.BulkIndexerItem{
 			// Action field configures the operation to perform (index, create, delete, update)
 			Action: "index",
 			// Body is an `io.Reader` with the payload
 			Body: bytes.NewReader(documentByte),
 
 			// OnSuccess is called for each successful operation
-			OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem) {
+			OnSuccess: func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
 				atomic.AddUint64(&countSuccessful, 1)
 			},
 			// OnFailure is called for each failed operation
-			OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem, err error) {
+			OnFailure: func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, err error) {
 				if err != nil {
 					logger.Errorw("Failed BulkIndex", "err", err)
 				} else {

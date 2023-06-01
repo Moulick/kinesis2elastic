@@ -1,34 +1,48 @@
 version: "3.9"
 
 services:
-  elasticsearch:
-    image: docker.io/bitnami/elasticsearch:7.13.1
+  opensearch:
+    image: opensearchproject/opensearch:2.7.0
+    environment:
+      discovery.type: "single-node"
+      node.name: opensearch
+      bootstrap.memory_lock: true # along with the memlock settings below, disables swapping
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
     ports:
       - "9200:9200"
-      - "9300:9300"
+      - "9600:9600"
     volumes:
-      - "elasticsearch_data:/bitnami/elasticsearch"
-  kinesis2elasticsearch:
+      - opensearch-data:/usr/share/opensearch/data
+
+  kinesis2elastic:
     build: .
     ports:
       - "8080:8080"
     environment:
       - PORT=8080
-      - ELASTIC_URL=http://elasticsearch:9200
+      - OPENSEARCH_URL=http://opensearch:9200
       - OUTPUT_INDEX=firehose
     depends_on:
-      - elasticsearch
-  kibana:
-    image: docker.io/bitnami/kibana:7.13.1
+      - opensearch
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.7.0
+    container_name: opensearch-dashboards
     ports:
       - "5601:5601"
-    volumes:
-      - "kibana_data:/bitnami/kibana"
-    depends_on:
-      - elasticsearch
+    expose:
+      - "5601"
+    environment:
+      OPENSEARCH_HOSTS: '["https://opensearch:9200"]'
+
 
 volumes:
-  elasticsearch_data:
-    driver: local
-  kibana_data:
+  opensearch-data:
     driver: local
