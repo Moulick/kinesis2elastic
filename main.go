@@ -35,11 +35,11 @@ import (
 	"github.com/Moulick/Kinesis2Elastic/outgoing"
 )
 
-//go:embed ingest/axway-ingest.json
-var axwayIngest string
-
-//go:embed ingest/one-pipeline-to-rule-them-all.json
-var onePipelineToRuleThemAll string
+// //go:embed ingest/axway-ingest.json
+// var axwayIngest string
+//
+// //go:embed ingest/one-pipeline-to-rule-them-all.json
+// var onePipelineToRuleThemAll string
 
 const (
 	numWorkers         = 3
@@ -49,21 +49,21 @@ const (
 )
 
 var (
-	encodingMismatch = errors.New("data encoding mismatch")
-	MIMEGZIP         = "application/x-gzip"
+	errEncodingMismatch = errors.New("data encoding mismatch")
+	MIMEGZIP            = "application/x-gzip"
 )
 
 // firehoseSuccessResponse is the reponse sent back to AWS Kinesis Firehose on success
 // https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html
 type firehoseSuccessResponse struct {
-	RequestId string `json:"requestId"`
+	RequestID string `json:"requestId"`
 	Timestamp int64  `json:"timestamp"`
 }
 
 // firehoseErrorBody is the reponse sent back to AWS Kinesis Firehose on error
 // https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html
 type firehoseErrorBody struct {
-	RequestId string `json:"requestId"`
+	RequestID string `json:"requestId"`
 	Timestamp int64  `json:"timestamp"`
 	Error     string `json:"errorMessage"`
 }
@@ -71,13 +71,13 @@ type firehoseErrorBody struct {
 // dataDetect detects the content type and encoding of the request body.
 // returns error for unsupported Content-Encoding and Content-Type if not supported or mismatch in header vs body
 // return nil and detected content type if success
-func dataDetect(c *gin.Context, logger *zap.SugaredLogger) (error, string) {
+func dataDetect(c *gin.Context, logger *zap.SugaredLogger) (string, error) {
 	// extract header for incoming request
 	contentType := c.ContentType()
 	logger.Debugw("Content-Type", "Content-Type", contentType)
 	// is the content type supported?
 	if contentType != "application/json" {
-		return fmt.Errorf("unsupported Content-Type: %s", contentType), contentType
+		return contentType, fmt.Errorf("unsupported Content-Type: %s", contentType)
 	}
 
 	contentEncodingHeader := c.GetHeader("Content-Encoding")
@@ -85,14 +85,14 @@ func dataDetect(c *gin.Context, logger *zap.SugaredLogger) (error, string) {
 	// is content encoding supported?
 	if contentEncodingHeader != "" {
 		if contentEncodingHeader != "gzip" {
-			return fmt.Errorf("unsupported Content-Encoding %s", contentEncodingHeader), ""
+			return "", fmt.Errorf("unsupported Content-Encoding %s", contentEncodingHeader)
 		}
 	}
 
 	// Duplicate the body, as like when we do detection, it closes the body
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	// Restore the request body to its original state
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -100,7 +100,7 @@ func dataDetect(c *gin.Context, logger *zap.SugaredLogger) (error, string) {
 	// convert body to bytes
 	reqBodyBytes, err := io.ReadAll(io.NopCloser(bytes.NewBuffer(body)))
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	// check if body is gzip compressed
 	realContentEncoding := http.DetectContentType(reqBodyBytes)
@@ -109,17 +109,18 @@ func dataDetect(c *gin.Context, logger *zap.SugaredLogger) (error, string) {
 	if realContentEncoding == MIMEGZIP {
 		if contentEncodingHeader != "gzip" {
 			logger.Warnw("detected data encoding mismatch, incoming Content-Encoding header not set properly", "expected", "gzip", "received", realContentEncoding)
-			return encodingMismatch, ""
+			return "", errEncodingMismatch
 		}
 	} else if strings.Contains(realContentEncoding, "text/plain") {
-		return nil, "text/plain"
+		return "text/plain", nil
 	} else {
-		return fmt.Errorf("unsupported data encoding %s", realContentEncoding), ""
+		return "", fmt.Errorf("unsupported data encoding %s", realContentEncoding)
 	}
 	// all checkes passed, return the content type
-	return nil, realContentEncoding
+	return realContentEncoding, nil
 }
 
+//nolint:funlen
 func main() {
 	fmt.Println("Starting Kinesis2Elastic")
 	// Create context that listens for the interrupt signal from the OS.
@@ -179,7 +180,6 @@ func main() {
 	defer func(logger *zap.Logger) {
 		// if cannot sync logger, probably nothing can be done anyway
 		_ = logger.Sync()
-
 	}(logger)
 
 	suggar := logger.Sugar()
@@ -251,10 +251,10 @@ func main() {
 			dataIncoming incoming.FirehoseRequest
 		)
 
-		//body, _ := io.ReadAll(c.Request.Body)                // TODO: remove this
-		//c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // TODO: remove this
-		//fmt.Println(string(body))                            // TODO: remove this
-		//fmt.Println(json.Marshal(c.Request.Header))          // TODO: remove this
+		// body, _ := io.ReadAll(c.Request.Body)                // TODO: remove this
+		// c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // TODO: remove this
+		// fmt.Println(string(body))                            // TODO: remove this
+		// fmt.Println(json.Marshal(c.Request.Header))          // TODO: remove this
 
 		// Extract the Firehose Request ID and set the logger to add to every log message
 		XAmzFirehoseRequestID := c.Request.Header.Get("X-Amz-Firehose-Request-Id")
@@ -267,8 +267,8 @@ func main() {
 		zaplog.Infof("New Request")
 
 		// detect if the request is in a supported format
-		err, contentType := dataDetect(c, zaplog)
-		if errors.Is(err, encodingMismatch) {
+		contentType, err := dataDetect(c, zaplog)
+		if errors.Is(err, errEncodingMismatch) {
 			zaplog.Warnf("treating body as gzip(ed) json")
 			contentType = MIMEGZIP
 		} else if err != nil {
@@ -284,7 +284,7 @@ func main() {
 			if err = c.ShouldBindBodyWith(&dataIncoming, gzipbinding.GzipJSONBinding{}); err != nil {
 				zaplog.Errorw("Error parsing GZIP JSON request body", "error", err)
 				c.AbortWithStatusJSON(http.StatusBadRequest, firehoseErrorBody{
-					RequestId: XAmzFirehoseRequestID,
+					RequestID: XAmzFirehoseRequestID,
 					Timestamp: time.Now().UTC().UnixMilli(),
 					Error:     err.Error(),
 				})
@@ -294,7 +294,7 @@ func main() {
 			if err = c.ShouldBindJSON(&dataIncoming); err != nil {
 				zaplog.Errorw("Error parsing JSON request body", "error", err)
 				c.AbortWithStatusJSON(http.StatusBadRequest, firehoseErrorBody{
-					RequestId: XAmzFirehoseRequestID,
+					RequestID: XAmzFirehoseRequestID,
 					Timestamp: time.Now().UTC().UnixMilli(),
 					Error:     err.Error(),
 				})
@@ -311,7 +311,7 @@ func main() {
 		if err != nil {
 			zaplog.Errorw("Failed splitting records", "err", err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
-				RequestId: XAmzFirehoseRequestID,
+				RequestID: XAmzFirehoseRequestID,
 				Timestamp: time.Now().UTC().UnixMilli(),
 				Error:     err.Error(),
 			})
@@ -325,7 +325,7 @@ func main() {
 		bi, err := getBulkIndexer(c, elasticURL, elasticPipeline, authHeader, zapConfig, outputIndex, XAmzFirehoseRequestID, zaplog)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
-				RequestId: XAmzFirehoseRequestID,
+				RequestID: XAmzFirehoseRequestID,
 				Timestamp: time.Now().UTC().UnixMilli(),
 				Error:     err.Error(),
 			})
@@ -336,7 +336,7 @@ func main() {
 		err = queueBulkIndex(documents, countSuccessful, bi, zaplog)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
-				RequestId: XAmzFirehoseRequestID,
+				RequestID: XAmzFirehoseRequestID,
 				Timestamp: time.Now().UTC().UnixMilli(),
 				Error:     err.Error(),
 			})
@@ -348,7 +348,7 @@ func main() {
 		if err != nil {
 			zaplog.Errorw("Failed to close bulk indexer", "err", err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
-				RequestId: XAmzFirehoseRequestID,
+				RequestID: XAmzFirehoseRequestID,
 				Timestamp: time.Now().UTC().UnixMilli(),
 				Error:     err.Error(),
 			})
@@ -357,17 +357,17 @@ func main() {
 
 		if !c.IsAborted() {
 			c.JSON(http.StatusOK, firehoseSuccessResponse{
-				RequestId: dataIncoming.RequestID,
+				RequestID: dataIncoming.RequestID,
 				Timestamp: dataIncoming.Timestamp,
 			})
 			return
 		}
-
 	})
 
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: r,
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadHeaderTimeout: 2 * time.Second,
 	}
 	// Initializing the server in a goroutine so that
 	// it won't block the graceful shutdown handling below
@@ -397,7 +397,7 @@ func main() {
 }
 
 // getBulkIndexer returns a new elasticSearch client and BulkIndexer
-func getBulkIndexer(c *gin.Context, elasticURL string, elasticPipeline string, authHeader string, zapConfig zap.Config, outputIndex string, XAmzFirehoseRequestID string, logger *zap.SugaredLogger) (esutil.BulkIndexer, error) {
+func getBulkIndexer(c *gin.Context, elasticURL string, elasticPipeline string, authHeader string, zapConfig zap.Config, outputIndex string, xAmzFirehoseRequestID string, logger *zap.SugaredLogger) (esutil.BulkIndexer, error) {
 	// exponential backoff to prevent overloading elasticsearch
 	retryBackoff := backoff.NewExponentialBackOff()
 	cfg := elasticsearch.Config{
@@ -441,7 +441,7 @@ func getBulkIndexer(c *gin.Context, elasticURL string, elasticPipeline string, a
 		// 	"err", err,
 		// )
 		c.AbortWithStatusJSON(http.StatusInternalServerError, firehoseErrorBody{
-			RequestId: XAmzFirehoseRequestID,
+			RequestID: xAmzFirehoseRequestID,
 			Timestamp: time.Now().UTC().UnixMilli(),
 			Error:     err.Error(),
 		})
@@ -451,7 +451,9 @@ func getBulkIndexer(c *gin.Context, elasticURL string, elasticPipeline string, a
 }
 
 // splitRecords splits the incoming record into a slice of document
-func splitRecords(dataIncoming incoming.FirehoseRequest, XAmzFirehoseRequestID string, logger *zap.SugaredLogger) ([]outgoing.Document, error) {
+//
+//nolint:funlen
+func splitRecords(dataIncoming incoming.FirehoseRequest, xAmzFirehoseRequestID string, logger *zap.SugaredLogger) ([]outgoing.Document, error) {
 	var documents []outgoing.Document
 
 	// iterate over all the records to split them into separate documents
@@ -503,13 +505,13 @@ func splitRecords(dataIncoming incoming.FirehoseRequest, XAmzFirehoseRequestID s
 					logger.Errorw("Failed to marshal stringLog", "err", err, "stringLog", logEvent.Message)
 					return []outgoing.Document{}, err
 				}
-				//cwEvent = json.RawMessage([]byte())
-				//return []outgoing.Document{}, err
+				// cwEvent = json.RawMessage([]byte())
+				// return []outgoing.Document{}, err
 			}
 			// Now we finally have a valid CloudWatch event
 			// create a new document
 			event := outgoing.Document{
-				RequestID: XAmzFirehoseRequestID,
+				RequestID: xAmzFirehoseRequestID,
 				TimeStamp: time.UnixMilli(dataIncoming.Timestamp).UTC(),
 				Record: outgoing.Record{
 					Data: outgoing.Data{
@@ -581,9 +583,9 @@ func queueBulkIndex(documents []outgoing.Document, countSuccessful uint64, bi es
 	return nil
 }
 
-func read(r io.Reader) string {
-	var b bytes.Buffer
-	_, _ = b.ReadFrom(r)
-
-	return b.String()
-}
+// func read(r io.Reader) string {
+//	var b bytes.Buffer
+//	_, _ = b.ReadFrom(r)
+//
+//	return b.String()
+// }
