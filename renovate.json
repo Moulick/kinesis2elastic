@@ -5,7 +5,6 @@
     ":gomod",
     "preview:dockerCompose",
     "preview:dockerVersions",
-    "monorepo:*",
     "group:kubernetes"
   ],
   "packageRules": [
