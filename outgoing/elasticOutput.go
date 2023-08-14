@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Document is the body sent to ElasticSearch
+// Document is the body sent to OpenSearch
 // It tries to closly resumble the FirehoseRequest as much as possible
 // It deviates from the FirehoseRequest in that it does not contain nested events
 // Each event is sent as a separate document
