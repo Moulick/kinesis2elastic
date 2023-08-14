@@ -1,4 +1,4 @@
-module github.com/Moulick/Kinesis2Elastic
+module github.com/Moulick/Kinesis2Elastic/v2
 
 go 1.21
 

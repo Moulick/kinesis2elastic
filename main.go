@@ -29,10 +29,10 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/Moulick/Kinesis2Elastic/gzipbinding"
-	"github.com/Moulick/Kinesis2Elastic/incoming"
-	"github.com/Moulick/Kinesis2Elastic/log"
-	"github.com/Moulick/Kinesis2Elastic/outgoing"
+	"github.com/Moulick/Kinesis2Elastic/v2/gzipbinding"
+	"github.com/Moulick/Kinesis2Elastic/v2/incoming"
+	"github.com/Moulick/Kinesis2Elastic/v2/log"
+	"github.com/Moulick/Kinesis2Elastic/v2/outgoing"
 )
 
 // //go:embed ingest/axway-ingest.json

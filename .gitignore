@@ -25,3 +25,4 @@ bin
 .scannerwork
 /.vscode/
 Kinesis2Elastic
+dist/
