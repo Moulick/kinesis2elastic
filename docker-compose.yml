@@ -1,13 +1,28 @@
 version: "3.9"
 
 services:
+
+  kinesis2elastic:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OUTPUT_INDEX=firehose
+    depends_on:
+      - opensearch
+
   opensearch:
     image: opensearchproject/opensearch:2.9.0
+    container_name: opensearch
     environment:
       discovery.type: "single-node"
       node.name: opensearch
       bootstrap.memory_lock: true # along with the memlock settings below, disables swapping
       OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      DISABLE_SECURITY_PLUGIN: true
+      DISABLE_INSTALL_DEMO_CONFIG: true
     ulimits:
       memlock:
         soft: -1
@@ -21,26 +36,18 @@ services:
     volumes:
       - opensearch-data:/usr/share/opensearch/data
 
-  kinesis2elastic:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - PORT=8080
-      - OPENSEARCH_URL=http://opensearch:9200
-      - OUTPUT_INDEX=firehose
-    depends_on:
-      - opensearch
-
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:2.9.0
     container_name: opensearch-dashboards
+    environment:
+      DISABLE_SECURITY_PLUGIN: true
+      DISABLE_INSTALL_DEMO_CONFIG: true
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: true
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
     ports:
       - "5601:5601"
     expose:
       - "5601"
-    environment:
-      OPENSEARCH_HOSTS: '["https://opensearch:9200"]'
 
 
 volumes:
