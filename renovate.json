@@ -1,7 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended",
+    ":gomod",
+    "preview:dockerCompose",
+    "preview:dockerVersions",
+    "monorepo:*",
+    "group:kubernetes"
   ],
   "packageRules": [
     {
@@ -10,6 +15,13 @@
       ],
       "matchDepTypes": [
         "indirect"
+      ]
+    },
+    {
+      "groupName": "opensearch",
+      "groupSlug": "opensearch",
+      "matchPackagePatterns": [
+        "opensearch"
       ]
     }
   ],
