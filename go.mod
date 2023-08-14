@@ -8,7 +8,7 @@ require (
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/jnovack/flag v1.16.0
-	github.com/opensearch-project/opensearch-go v1.1.0
+	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	go.uber.org/zap v1.24.0
 )
 
