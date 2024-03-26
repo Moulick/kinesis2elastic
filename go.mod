@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Depado/ginprom v1.7.11
-	github.com/cenkalti/backoff/v4 v4.2.1
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/gin-contrib/zap v0.2.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/jnovack/flag v1.16.0
