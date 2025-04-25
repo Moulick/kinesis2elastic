@@ -1,14 +1,12 @@
 module github.com/Moulick/Kinesis2Elastic/v2
 
 go 1.22.2
-toolchain go1.24.1
-
 require (
 	github.com/Depado/ginprom v1.8.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/gin-contrib/zap v1.1.4
 	github.com/gin-gonic/gin v1.10.0
-	github.com/jnovack/flag v1.16.0
+	github.com/jnovack/flag v1.24.2
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	go.uber.org/zap v1.27.0
 )

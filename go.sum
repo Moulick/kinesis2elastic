@@ -57,8 +57,8 @@ github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeN
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
-github.com/jnovack/flag v1.16.0 h1:gJC3JVofq/hNGlNfki4NlIWLOiDkaeLNUOCzznCablU=
-github.com/jnovack/flag v1.16.0/go.mod h1:8g1MmrEr03yquMjIe6CYeXUiIsZ46ssYt+o3X7uEjcg=
+github.com/jnovack/flag v1.24.2 h1:URE1phX5b2QYS7MszH6vprwSa/Xvj1oH6RR/WAutkDo=
+github.com/jnovack/flag v1.24.2/go.mod h1:jHKr0Bh5ikRe2VQPUb/djXZYUAvhqR3KbbRo8XURJlU=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/klauspost/cpuid/v2 v2.0.9/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
