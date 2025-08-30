@@ -1,7 +1,6 @@
 module github.com/Moulick/Kinesis2Elastic/v2
 
-go 1.22.2
-toolchain go1.24.1
+go 1.25
 
 require (
 	github.com/Depado/ginprom v1.8.1
