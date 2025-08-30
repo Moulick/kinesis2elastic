@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.25 as builder
+FROM docker.io/library/golang:1.25 AS builder
 
 WORKDIR /app
 # Copy the Go Modules manifests
