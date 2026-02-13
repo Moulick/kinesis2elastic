@@ -3,7 +3,7 @@ module github.com/Moulick/Kinesis2Elastic/v2
 go 1.25
 
 require (
-	github.com/Depado/ginprom v1.8.2
+	github.com/Depado/ginprom v1.8.3
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/gin-contrib/zap v1.1.6
 	github.com/gin-gonic/gin v1.11.0
