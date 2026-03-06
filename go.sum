@@ -1,7 +1,7 @@
-github.com/Depado/ginprom v1.8.2 h1:H3sXqXlHfXpoUHciuWSbod1jzc9OyaZ4edM5oYL/nUI=
-github.com/Depado/ginprom v1.8.2/go.mod h1:uq9dl4TqwBr0OpkvswJURh5fmjZcbrrMoDiDFHN8dMw=
-github.com/appleboy/gofight/v2 v2.2.0 h1:uqQ3wzTlF1ma+r4jRCQ4cygCjrGZyZEBMBCjT/t9zRw=
-github.com/appleboy/gofight/v2 v2.2.0/go.mod h1:USTV3UbA5kHBs4I91EsPi+6PIVZAx3KLorYjvtON91A=
+github.com/Depado/ginprom v1.8.3 h1:da9SEAEoki+NfIdjYITYSNbWh2ZCMu99tWHkr3UZHjw=
+github.com/Depado/ginprom v1.8.3/go.mod h1:m8inEFEmJ6ywAxmIICmFQePvCJJfcS9Mt4EoThZ/8c4=
+github.com/appleboy/gofight/v2 v2.2.1 h1:OOJrZ71tdOFDzyyBvP+h047w0EJHktqTo4mEOTDrKy0=
+github.com/appleboy/gofight/v2 v2.2.1/go.mod h1:dOz1A3YtfciapH897IQOAR6JfTFm0nwJctaDuJZiijY=
 github.com/aws/aws-sdk-go v1.44.263/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
 github.com/aws/aws-sdk-go-v2 v1.18.0/go.mod h1:uzbQtefpm44goOPmdKyAlXSNcwlRgF3ePWVW6EtJvvw=
 github.com/aws/aws-sdk-go-v2/config v1.18.25/go.mod h1:dZnYpD5wTW/dQF0rRNLVypB396zWCcPiBIvdvSWHEg4=
