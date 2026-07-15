@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/Depado/ginprom v1.8.3
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/gin-contrib/zap v1.1.6
+	github.com/gin-contrib/zap v1.1.7
 	github.com/gin-gonic/gin v1.12.0
 	github.com/jnovack/flag v1.25.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
